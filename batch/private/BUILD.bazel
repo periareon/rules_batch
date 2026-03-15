@@ -1,0 +1,18 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+
+exports_files(
+    [
+        "bat_executable.bzl",
+        "providers.bzl",
+    ],
+    visibility = ["//batch:__pkg__"],
+)
+
+bzl_library(
+    name = "private_bzl",
+    srcs = [
+        "bat_executable.bzl",
+        "providers.bzl",
+    ],
+    visibility = ["//batch:__pkg__"],
+)

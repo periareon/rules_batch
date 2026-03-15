@@ -1,0 +1,9 @@
+load("//batch:bat_test.bzl", "bat_test")
+
+bat_test(
+    name = "runfiles_test",
+    srcs = ["runfiles_test.bat"],
+    data = ["data.txt"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = ["//batch/runfiles"],
+)

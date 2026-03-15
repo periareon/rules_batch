@@ -1,0 +1,8 @@
+# {version}
+
+## Setup
+```python
+bazel_dep(name = "batch", version = "{version}")
+```
+
+Additional documentation can be found at: https://github.com/periareon/batch

@@ -1,0 +1,84 @@
+load("@rules_rust_mdbook//:defs.bzl", "mdbook", "mdbook_server")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
+
+stardoc(
+    name = "bat_binary",
+    out = "src/bat_binary.md",
+    input = "//batch:bat_binary.bzl",
+    table_of_contents_template = "@stardoc//stardoc:templates/markdown_tables/table_of_contents.vm",
+    tags = ["manual"],
+    deps = ["//batch:rules_bzl"],
+)
+
+stardoc(
+    name = "bat_test",
+    out = "src/bat_test.md",
+    input = "//batch:bat_test.bzl",
+    table_of_contents_template = "@stardoc//stardoc:templates/markdown_tables/table_of_contents.vm",
+    tags = ["manual"],
+    deps = ["//batch:rules_bzl"],
+)
+
+stardoc(
+    name = "bat_library",
+    out = "src/bat_library.md",
+    input = "//batch:bat_library.bzl",
+    table_of_contents_template = "@stardoc//stardoc:templates/markdown_tables/table_of_contents.vm",
+    tags = ["manual"],
+    deps = ["//batch:rules_bzl"],
+)
+
+stardoc(
+    name = "bat_info",
+    out = "src/bat_info.md",
+    input = "//batch:bat_info.bzl",
+    table_of_contents_template = "@stardoc//stardoc:templates/markdown_tables/table_of_contents.vm",
+    tags = ["manual"],
+    deps = ["//batch:rules_bzl"],
+)
+
+stardoc(
+    name = "bat_binary_info",
+    out = "src/bat_binary_info.md",
+    input = "//batch:bat_binary_info.bzl",
+    table_of_contents_template = "@stardoc//stardoc:templates/markdown_tables/table_of_contents.vm",
+    tags = ["manual"],
+    deps = ["//batch:rules_bzl"],
+)
+
+mdbook(
+    name = "book",
+    srcs = glob(["src/**/*.md"]) + [
+        ":bat_binary",
+        ":bat_binary_info",
+        ":bat_info",
+        ":bat_library",
+        ":bat_test",
+    ],
+    book = "book.toml",
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+alias(
+    name = "docs",
+    actual = ":book",
+    tags = ["manual"],
+)
+
+mdbook_server(
+    name = "server",
+    book = ":book",
+    tags = ["manual"],
+)
+
+sh_binary(
+    name = "publish_book",
+    srcs = ["publish_book.sh"],
+    data = [":book"],
+    env = {"BOOK_DIR": "$(rootpath :book)"},
+    tags = ["manual"],
+)

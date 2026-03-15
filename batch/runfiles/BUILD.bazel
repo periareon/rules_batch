@@ -1,0 +1,12 @@
+load("//batch:bat_library.bzl", "bat_library")
+
+exports_files(
+    ["runfiles.bat"],
+    visibility = ["//visibility:public"],
+)
+
+bat_library(
+    name = "runfiles",
+    srcs = ["runfiles.bat"],
+    visibility = ["//visibility:public"],
+)

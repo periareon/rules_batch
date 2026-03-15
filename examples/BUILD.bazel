@@ -1,0 +1,17 @@
+load("@rules_batch//batch:bat_binary.bzl", "bat_binary")
+load("@rules_batch//batch:bat_test.bzl", "bat_test")
+
+bat_binary(
+    name = "greet",
+    srcs = ["greet.bat"],
+    data = ["data/greeting.txt"],
+    deps = ["@rules_batch//batch/runfiles"],
+)
+
+bat_test(
+    name = "greet_test",
+    srcs = ["greet.bat"],
+    data = ["data/greeting.txt"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = ["@rules_batch//batch/runfiles"],
+)
