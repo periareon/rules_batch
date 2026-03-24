@@ -381,6 +381,7 @@ if not defined RLOCATION (
             if "%%i" equ "!_rf!" (set "RLOCATION=%%j") else if "!_k:~-28!" equ "/batch/runfiles/runfiles.bat" set "RLOCATION=%%j"
         )
     )
+    if defined _rf_mf set "RUNFILES_MANIFEST_FILE=!_rf_mf!"
     set "_rf_mf="
     set "_k="
 )
@@ -424,6 +425,7 @@ if not defined RLOCATION (
             if "%%i" equ "!_rf!" (set "RLOCATION=%%j") else if "!_k:~-28!" equ "/batch/runfiles/runfiles.bat" set "RLOCATION=%%j"
         )
     )
+    if defined _rf_mf set "RUNFILES_MANIFEST_FILE=!_rf_mf!"
     set "_rf_mf="
     set "_k="
 )
@@ -444,6 +446,22 @@ call "%RLOCATION%" "my_dep/data/file.txt" RESULT
 call "%RLOCATION%" "my_dep/data/file.txt" RESULT "+my_ext+my_repo"
 </code></pre>
 <p>In practice, the third argument is almost never needed. Batch scripts live in the main repository in the vast majority of cases, and the default covers that. The explicit form exists for the rare case where a batch script in an external repository needs to resolve paths from its own repo mapping context.</p>
+<h2 id="exporting-environment-variables"><a class="header" href="#exporting-environment-variables">Exporting environment variables</a></h2>
+<p>Before spawning child processes that depend on runfiles (e.g. tools built with <code>rules_venv</code>), call <code>:runfiles_export_envvars</code> to ensure both <code>RUNFILES_DIR</code> and <code>RUNFILES_MANIFEST_FILE</code> are set:</p>
+<pre><code class="language-bat">call :runfiles_export_envvars
+if errorlevel 1 (
+    echo&gt;&amp;2 ERROR: runfiles environment not available
+    exit /b 1
+)
+</code></pre>
+<p>The preamble already sets whichever variable it discovers during initialization (mirroring the shell init block). This function fills in the <strong>other</strong> variable so children see a consistent pair:</p>
+<ul>
+<li>If only <code>RUNFILES_DIR</code> is set, derives <code>RUNFILES_MANIFEST_FILE</code> from <code>RUNFILES_DIR\MANIFEST</code> or <code>RUNFILES_DIR_manifest</code>.</li>
+<li>If only <code>RUNFILES_MANIFEST_FILE</code> is set, strips the <code>\MANIFEST</code> or <code>_manifest</code> suffix to derive <code>RUNFILES_DIR</code>.</li>
+<li>If both are already set and valid, no changes are made.</li>
+<li>Returns <code>exit /b 1</code> if neither variable points to a valid path.</li>
+</ul>
+<p>This mirrors <a href="https://github.com/bazel-contrib/rules_shell"><code>runfiles_export_envvars</code></a> from <code>rules_shell</code>.</p>
 <h2 id="inline-mode"><a class="header" href="#inline-mode">Inline mode</a></h2>
 <p>Instead of calling <code>runfiles.bat</code> externally, you can concatenate or paste its content into your script at build time. The <code>:rlocation</code> subroutine is then available as a local label call:</p>
 <pre><code class="language-bat">call :rlocation "my_workspace/data/config.txt" CONFIG_PATH
