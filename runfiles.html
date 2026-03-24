@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>BatBinaryInfo - rules_batch</title>
+        <title>Runfiles - rules_batch</title>
 
 
         <!-- Custom HTML head -->
@@ -155,32 +155,129 @@
 
                 <div id="content" class="content">
                     <main>
-                        <!-- Generated with Stardoc: http://skydoc.bazel.build -->
-<p>BatBinaryInfo provider definition.</p>
-<h2 id="providers"><a class="header" href="#providers">Providers</a></h2>
-<ul>
-<li><a href="#BatBinaryInfo">BatBinaryInfo</a></li>
-</ul>
-<p><a id="BatBinaryInfo"></a></p>
-<h2 id="batbinaryinfo"><a class="header" href="#batbinaryinfo">BatBinaryInfo</a></h2>
-<pre>
-load("@rules_batch//batch:bat_binary_info.bzl", "BatBinaryInfo")
+                        <h1 id="runfiles"><a class="header" href="#runfiles">Runfiles</a></h1>
+<p>Utility for resolving <a href="https://bazel.build/extending/rules#runfiles">Bazel runfiles</a> paths at runtime in batch scripts.</p>
+<h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
+<p>Add the runfiles target to your <code>bat_binary</code> or <code>bat_test</code> dependencies:</p>
+<pre><code class="language-python">bat_binary(
+    name = "my_tool",
+    srcs = ["my_tool.bat"],
+    deps = ["@rules_batch//batch/runfiles"],
+)
+</code></pre>
+<h2 id="preamble"><a class="header" href="#preamble">Preamble</a></h2>
+<p>Copy-paste this block at the top of your script (after <code>setlocal enabledelayedexpansion</code>) to locate <code>runfiles.bat</code> and set the <code>RLOCATION</code> variable:</p>
+<pre><code class="language-bat">@REM --- begin runfiles.bat initialization v1 ---
+set "_rf=rules_batch/batch/runfiles/runfiles.bat"
+set "RLOCATION="
+if defined RUNFILES_DIR if exist "!RUNFILES_DIR!\!_rf:/=\!" set "RLOCATION=!RUNFILES_DIR!\!_rf:/=\!"
+if not defined RLOCATION if exist "%~f0.runfiles\!_rf:/=\!" (
+    set "RUNFILES_DIR=%~f0.runfiles"
+    set "RLOCATION=!RUNFILES_DIR!\!_rf:/=\!"
+)
+if not defined RLOCATION (
+    set "_rf_mf="
+    if defined RUNFILES_MANIFEST_FILE if exist "!RUNFILES_MANIFEST_FILE!" set "_rf_mf=!RUNFILES_MANIFEST_FILE!"
+    if not defined _rf_mf if defined RUNFILES_DIR (
+        if exist "!RUNFILES_DIR!\MANIFEST" (set "_rf_mf=!RUNFILES_DIR!\MANIFEST") else if exist "!RUNFILES_DIR!_manifest" set "_rf_mf=!RUNFILES_DIR!_manifest"
+    )
+    if not defined _rf_mf for %%m in ("%~f0.runfiles\MANIFEST" "%~f0.runfiles_manifest" "%~f0.exe.runfiles_manifest") do if not defined _rf_mf if exist "%%~m" set "_rf_mf=%%~m"
+    if defined _rf_mf (
+        set "_rf_mf=!_rf_mf:/=\!"
+        for /F "tokens=1,* usebackq" %%i in ("!_rf_mf!") do if not defined RLOCATION (
+            set "_k=%%i"
+            if "%%i" equ "!_rf!" (set "RLOCATION=%%j") else if "!_k:~-28!" equ "/batch/runfiles/runfiles.bat" set "RLOCATION=%%j"
+        )
+    )
+    set "_rf_mf="
+    set "_k="
+)
+if not defined RLOCATION (echo&gt;&amp;2 ERROR: cannot find !_rf! &amp; exit /b 1)
+set "_rf="
+@REM --- end runfiles.bat initialization v1 ---
+</code></pre>
+<p>After the preamble, <code>%RLOCATION%</code> points to <code>runfiles.bat</code> and you can resolve runfiles:</p>
+<pre><code class="language-bat">call "%RLOCATION%" "my_workspace/data/config.txt" CONFIG_PATH
+echo Config is at: %CONFIG_PATH%
+</code></pre>
+<p>The preamble tries three strategies in order:</p>
+<ol>
+<li><strong>Directory lookup</strong> via <code>RUNFILES_DIR</code> -- fast path when the runfiles tree exists.</li>
+<li><strong>Sibling <code>.runfiles</code> directory</strong> next to the script (<code>%~f0.runfiles</code>).</li>
+<li><strong>Manifest scan</strong> -- reads the manifest file line-by-line to find the <code>runfiles.bat</code> entry. A suffix fallback matches any canonical repo prefix ending in <code>/batch/runfiles/runfiles.bat</code> to handle Bzlmod version suffixes.</li>
+</ol>
+<h2 id="full-example"><a class="header" href="#full-example">Full example</a></h2>
+<pre><code class="language-bat">@echo off
+setlocal enableextensions enabledelayedexpansion
 
-BatBinaryInfo()
-</pre>
-<p>A provider for batch binary rules.</p>
+@REM --- begin runfiles.bat initialization v1 ---
+set "_rf=rules_batch/batch/runfiles/runfiles.bat"
+set "RLOCATION="
+if defined RUNFILES_DIR if exist "!RUNFILES_DIR!\!_rf:/=\!" set "RLOCATION=!RUNFILES_DIR!\!_rf:/=\!"
+if not defined RLOCATION if exist "%~f0.runfiles\!_rf:/=\!" (
+    set "RUNFILES_DIR=%~f0.runfiles"
+    set "RLOCATION=!RUNFILES_DIR!\!_rf:/=\!"
+)
+if not defined RLOCATION (
+    set "_rf_mf="
+    if defined RUNFILES_MANIFEST_FILE if exist "!RUNFILES_MANIFEST_FILE!" set "_rf_mf=!RUNFILES_MANIFEST_FILE!"
+    if not defined _rf_mf if defined RUNFILES_DIR (
+        if exist "!RUNFILES_DIR!\MANIFEST" (set "_rf_mf=!RUNFILES_DIR!\MANIFEST") else if exist "!RUNFILES_DIR!_manifest" set "_rf_mf=!RUNFILES_DIR!_manifest"
+    )
+    if not defined _rf_mf for %%m in ("%~f0.runfiles\MANIFEST" "%~f0.runfiles_manifest" "%~f0.exe.runfiles_manifest") do if not defined _rf_mf if exist "%%~m" set "_rf_mf=%%~m"
+    if defined _rf_mf (
+        set "_rf_mf=!_rf_mf:/=\!"
+        for /F "tokens=1,* usebackq" %%i in ("!_rf_mf!") do if not defined RLOCATION (
+            set "_k=%%i"
+            if "%%i" equ "!_rf!" (set "RLOCATION=%%j") else if "!_k:~-28!" equ "/batch/runfiles/runfiles.bat" set "RLOCATION=%%j"
+        )
+    )
+    set "_rf_mf="
+    set "_k="
+)
+if not defined RLOCATION (echo&gt;&amp;2 ERROR: cannot find !_rf! &amp; exit /b 1)
+set "_rf="
+@REM --- end runfiles.bat initialization v1 ---
+
+call "%RLOCATION%" "my_workspace/data/config.txt" CONFIG_PATH
+echo Config is at: %CONFIG_PATH%
+</code></pre>
+<h2 id="repo-mapping"><a class="header" href="#repo-mapping">Repo mapping</a></h2>
+<p>When Bazel provides a <code>_repo_mapping</code> file in the runfiles manifest, <code>rlocation</code> automatically translates the first path segment (the apparent repo name) to the canonical runfiles directory name before the manifest lookup. This supports both the standard format and the compact wildcard format introduced by <a href="https://github.com/bazelbuild/bazel/issues/26262"><code>--incompatible_compact_repo_mapping_manifest</code></a> in Bazel 9.</p>
+<p>The translation uses the <strong>source repository</strong> to determine which view of the repo mapping applies. By default, the main repository is assumed (empty source repo). An optional third argument can override this:</p>
+<pre><code class="language-bat">@REM Default: resolves using the main repo's mapping (most common case).
+call "%RLOCATION%" "my_dep/data/file.txt" RESULT
+
+@REM Explicit: resolves using +my_ext+my_repo's mapping.
+call "%RLOCATION%" "my_dep/data/file.txt" RESULT "+my_ext+my_repo"
+</code></pre>
+<p>In practice, the third argument is almost never needed. Batch scripts live in the main repository in the vast majority of cases, and the default covers that. The explicit form exists for the rare case where a batch script in an external repository needs to resolve paths from its own repo mapping context.</p>
+<h2 id="inline-mode"><a class="header" href="#inline-mode">Inline mode</a></h2>
+<p>Instead of calling <code>runfiles.bat</code> externally, you can concatenate or paste its content into your script at build time. The <code>:rlocation</code> subroutine is then available as a local label call:</p>
+<pre><code class="language-bat">call :rlocation "my_workspace/data/config.txt" CONFIG_PATH
+echo Config is at: !CONFIG_PATH!
+</code></pre>
+<p>When inlined, only the subroutine block (between <code>goto :_rl_end</code> and <code>:_rl_end</code>) is active. The standalone entry point at the bottom of the file is unreachable because the user's script never falls through to it. Intermediate variables use a <code>_rl_</code> prefix to minimize collisions.</p>
+<h2 id="manifest-discovery"><a class="header" href="#manifest-discovery">Manifest discovery</a></h2>
+<p>The manifest is located by trying, in order:</p>
+<ol>
+<li><code>RUNFILES_MANIFEST_FILE</code> env var -- used directly (most explicit)</li>
+<li><code>%RUNFILES_DIR%\MANIFEST</code> -- <code>MANIFEST</code> inside the runfiles directory (Windows convention)</li>
+<li><code>%RUNFILES_DIR%_manifest</code> -- sibling manifest next to the runfiles directory</li>
+<li><code>%~f0.runfiles\MANIFEST</code> -- <code>MANIFEST</code> inside the neighboring <code>.runfiles</code> directory</li>
+<li><code>%~f0.runfiles_manifest</code> -- neighboring manifest file</li>
+<li><code>%~f0.exe.runfiles_manifest</code> -- neighboring manifest with <code>.exe</code> suffix</li>
+</ol>
+<p>This mirrors the <a href="https://github.com/bazelbuild/bazel/blob/master/tools/bash/runfiles/runfiles.bash">POSIX shell runfiles preamble</a> discovery logic.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="bat_info.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="bat_binary_info.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="runfiles.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -188,13 +285,10 @@ BatBinaryInfo()
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="bat_info.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="bat_binary_info.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="runfiles.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
             </nav>
 
         </div>

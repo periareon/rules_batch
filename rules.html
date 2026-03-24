@@ -163,7 +163,7 @@
 <li><strong>Sources:</strong> Exactly one <code>.bat</code> or <code>.cmd</code> in <code>srcs</code> (the entry script).</li>
 <li><strong>Runfiles:</strong> Merges <code>deps</code>, <code>data</code>, the entry script, and runfiles support from <code>//batch/runfiles</code>.</li>
 </ul>
-<p>Runtime resolution uses <code>rlocation.bat</code> exposed as the <code>RLOCATION</code> environment variable; call it as:</p>
+<p>Runtime resolution uses the <a href="./runfiles.html">runfiles preamble</a> to set the <code>RLOCATION</code> variable, then resolves paths via:</p>
 <pre><code class="language-bat">call "%RLOCATION%" "workspace/path/to/file" RESULT_VAR
 </code></pre>
 <h2 id="bat_library"><a class="header" href="#bat_library"><code>bat_library</code></a></h2>
