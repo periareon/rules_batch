@@ -276,17 +276,6 @@ if errorlevel 1 (
 echo Config is at: !CONFIG_PATH!
 </code></pre>
 <p>When inlined, only the subroutine block (between <code>goto :_rl_end</code> and <code>:_rl_end</code>) is active. The standalone entry point at the bottom of the file is unreachable because the user's script never falls through to it. Intermediate variables use a <code>_rl_</code> prefix to minimize collisions.</p>
-<h2 id="manifest-discovery"><a class="header" href="#manifest-discovery">Manifest discovery</a></h2>
-<p>The manifest is located by trying, in order:</p>
-<ol>
-<li><code>RUNFILES_MANIFEST_FILE</code> env var -- used directly (most explicit)</li>
-<li><code>%RUNFILES_DIR%\MANIFEST</code> -- <code>MANIFEST</code> inside the runfiles directory (Windows convention)</li>
-<li><code>%RUNFILES_DIR%_manifest</code> -- sibling manifest next to the runfiles directory</li>
-<li><code>%~f0.runfiles\MANIFEST</code> -- <code>MANIFEST</code> inside the neighboring <code>.runfiles</code> directory</li>
-<li><code>%~f0.runfiles_manifest</code> -- neighboring manifest file</li>
-<li><code>%~f0.exe.runfiles_manifest</code> -- neighboring manifest with <code>.exe</code> suffix</li>
-</ol>
-<p>This mirrors the <a href="https://github.com/bazelbuild/bazel/blob/master/tools/bash/runfiles/runfiles.bash">POSIX shell runfiles preamble</a> discovery logic.</p>
 
                     </main>
 
