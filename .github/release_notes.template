@@ -2,7 +2,7 @@
 
 ## Setup
 ```python
-bazel_dep(name = "batch", version = "{version}")
+bazel_dep(name = "rules_batch", version = "{version}")
 ```
 
-Additional documentation can be found at: https://github.com/periareon/batch
+Additional documentation can be found at: https://github.com/periareon/rules_batch
