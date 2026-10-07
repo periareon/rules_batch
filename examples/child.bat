@@ -1,6 +1,10 @@
 @echo off
 setlocal enableextensions enabledelayedexpansion
 
+@REM Child script started by parent.bat. It lives in the runfiles of the parent
+@REM and has no .runfiles directory or manifest of its own, so its preamble can
+@REM only succeed through the RUNFILES_* variables the parent exported.
+
 @REM --- begin runfiles.bat initialization v3 ---
 set "_rf=batch/runfiles/runfiles.bat"
 if not defined RUNFILES_DIR if exist "%~f0.runfiles\" set "RUNFILES_DIR=%~f0.runfiles"
@@ -28,13 +32,12 @@ set "RLOCATION=!RLOCATION:/=\!"
 set "_rf=" & set "_rf_mf=" & set "_rf_rm=" & set "_rf_c=" & set "_rf_l="
 @REM --- end runfiles.bat initialization v3 ---
 
-@REM The first path segment is the apparent name of this module as declared in
-@REM MODULE.bazel; runfiles.bat maps it to the canonical runfiles directory.
 call "%RLOCATION%" "rules_batch_examples/data/greeting.txt" GREETING_PATH
 if errorlevel 1 (
-    echo>&2 ERROR: could not resolve greeting.txt
+    echo>&2 ERROR: child could not resolve greeting.txt
     exit /b 1
 )
 
-echo Reading greeting from: %GREETING_PATH%
+echo Child reading greeting from: %GREETING_PATH%
 type "%GREETING_PATH%"
+exit /b 0

@@ -5,4 +5,4 @@
 bazel_dep(name = "rules_batch", version = "{version}")
 ```
 
-Additional documentation can be found at: https://github.com/periareon/rules_batch
+Additional documentation can be found at: https://periareon.github.io/rules_batch/
