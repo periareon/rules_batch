@@ -13,9 +13,63 @@ on:
 env:
   BAZEL_STARTUP_FLAGS: --bazelrc=${{ github.workspace }}/.github/github.bazelrc
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   ci:
+    name: ci (${{ matrix.os }}${{ matrix.runfiles && format(', {0} runfiles', matrix.runfiles) || '' }})
     runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows runs twice in parallel: with manifest-only runfiles (the
+        # default) and with a populated runfiles tree, since scripts resolve
+        # runfiles differently in each mode.
+        include:
+          - os: macos-latest
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
+          - os: windows-2022
+            runfiles: manifest
+          - os: windows-2022
+            runfiles: symlinks
+    steps:
+      # Batch files must be CRLF for cmd to find labels. .gitattributes enforces
+      # that; checking out with autocrlf=input proves it, like a tarball would.
+      - run: git config --global core.autocrlf input
+      - uses: actions/checkout@v4
+
+      - uses: bazel-contrib/setup-bazel@0.14.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+
+      - name: Configure Bazel (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "startup --output_user_root=D:/bzl" >> user.bazelrc
+
+      - name: Enable runfiles symlinks (Windows)
+        if: matrix.runfiles == 'symlinks'
+        run: |
+          echo "startup --windows_enable_symlinks" >> user.bazelrc
+          echo "build --enable_runfiles" >> user.bazelrc
+
+      - name: Test
+        run: bazel $BAZEL_STARTUP_FLAGS test //...
+
+  ci-examples:
+    name: ci-examples (${{ matrix.os }}${{ matrix.runfiles && format(', {0} runfiles', matrix.runfiles) || '' }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: examples
     strategy:
       fail-fast: false
       matrix:
@@ -24,8 +78,12 @@ jobs:
           - os: ubuntu-24.04
           - os: ubuntu-24.04-arm
           - os: windows-2022
+            runfiles: manifest
+          - os: windows-2022
+            runfiles: symlinks
     steps:
-      # Checkout the code
+      - run: git config --global core.autocrlf input
+        working-directory: .
       - uses: actions/checkout@v4
 
       - uses: bazel-contrib/setup-bazel@0.14.0
@@ -34,83 +92,30 @@ jobs:
           disk-cache: ${{ github.workflow }}
           repository-cache: true
 
-      - name: Setup Bazelrc (Windows)
-        if: startswith(runner.os, 'Windows')
+      - name: Configure Bazel (Windows)
+        if: runner.os == 'Windows'
         run: |
-          echo "TEMP=$env:RUNNER_TEMP" >> "$env:GITHUB_ENV"
-          echo "TMP=$env:RUNNER_TEMP" >> "$env:GITHUB_ENV"
-          echo "startup --output_user_root=D:/bzl" > ./user.bazelrc
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "startup --output_user_root=D:/bzl" >> user.bazelrc
 
-      # Build and Test the code
-      - name: Build (Unix)
-        run: bazel ${BAZEL_STARTUP_FLAGS[@]} test //...
-        if: startswith(runner.os, 'Windows') != true
-      - name: Test (Windows)
-        run: bazel $env:BAZEL_STARTUP_FLAGS test //...
-        if: startswith(runner.os, 'Windows')
-
-      - name: Enable Runfiles (Windows)
-        if: startswith(runner.os, 'Windows')
+      - name: Enable runfiles symlinks (Windows)
+        if: matrix.runfiles == 'symlinks'
         run: |
-          echo "startup --windows_enable_symlinks" >> ./user.bazelrc
-          echo "build --enable_runfiles" >> ./user.bazelrc
+          echo "startup --windows_enable_symlinks" >> user.bazelrc
+          echo "build --enable_runfiles" >> user.bazelrc
 
-      # Build and Test the code
-      - name: Build (Unix)
-        run: bazel ${BAZEL_STARTUP_FLAGS[@]} test //...
-        if: startswith(runner.os, 'Windows') != true
-      - name: Test (Windows)
-        run: bazel $env:BAZEL_STARTUP_FLAGS test //...
-        if: startswith(runner.os, 'Windows')
+      - name: Configure Bazel
+        run: echo "common --keep_going" >> user.bazelrc
 
-
-  ci-examples:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - macos-latest
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
-          - windows-2022
-    steps:
-      # Checkout the code
-      - uses: actions/checkout@v4
-
-      - uses: bazel-contrib/setup-bazel@0.14.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
-          repository-cache: true
-
-      - name: Setup Bazelrc (Windows)
-        working-directory: "${{ github.workspace }}/examples"
-        run: |
-          echo "TEMP=$env:RUNNER_TEMP" >> "$env:GITHUB_ENV"
-          echo "TMP=$env:RUNNER_TEMP" >> "$env:GITHUB_ENV"
-          echo "startup --output_user_root=D:/bzl" > ./user.bazelrc
-        if: startswith(runner.os, 'Windows')
-      - name: Setup Bazelrc
-        working-directory: "${{ github.workspace }}/examples"
-        run: |
-          echo "common --keep_going" >> ./user.bazelrc
-
-      # Build and Test the code
-      - name: Test (Unix)
-        working-directory: "${{ github.workspace }}/examples"
-        run: bazel ${BAZEL_STARTUP_FLAGS[@]} test //...
-        if: startswith(runner.os, 'Windows') != true
-      - name: Test (Windows)
-        working-directory: "${{ github.workspace }}/examples"
-        run: bazel $env:BAZEL_STARTUP_FLAGS test //...
-        if: startswith(runner.os, 'Windows')
+      - name: Test
+        run: bazel $BAZEL_STARTUP_FLAGS test //...
 
       # Outside of `bazel test` and `bazel run` no RUNFILES_* variables are set,
       # so the preamble must discover the manifest next to the built script.
       - name: Run binaries directly (Windows)
-        working-directory: "${{ github.workspace }}/examples"
-        if: startswith(runner.os, 'Windows')
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           bazel $env:BAZEL_STARTUP_FLAGS build //:greet //:inline_greet //:parent
           foreach ($bin in "greet", "inline_greet", "parent") {
@@ -118,30 +123,29 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
-      - name: Enable Runfiles (Windows)
-        if: startswith(runner.os, 'Windows')
-        run: |
-          echo "startup --windows_enable_symlinks" >> ./user.bazelrc
-          echo "build --enable_runfiles" >> ./user.bazelrc
-
-      # Build and Test the code
-      - name: Build (Unix)
-        run: bazel ${BAZEL_STARTUP_FLAGS[@]} test //...
-        if: startswith(runner.os, 'Windows') != true
-      - name: Test (Windows)
-        run: bazel $env:BAZEL_STARTUP_FLAGS test //...
-        if: startswith(runner.os, 'Windows')
-
   ci-format:
     runs-on: ubuntu-24.04
     steps:
-      # Checkout the code
       - uses: actions/checkout@v4
       - uses: bazel-contrib/setup-bazel@0.14.0
         with:
           bazelisk-cache: true
           disk-cache: ${{ github.workflow }}
           repository-cache: true
+
+      # cmd.exe fails to find labels in batch files with LF line endings;
+      # .gitattributes forces CRLF at checkout and this verifies it held.
+      - name: Check batch file line endings
+        run: |
+          bad=""
+          while IFS= read -r f; do
+            if tr -d '\r' < "${f}" | cmp -s - "${f}"; then bad="${bad}${f}"$'\n'; fi
+          done < <(find . -name .git -prune -o -type f \( -name '*.bat' -o -name '*.cmd' \) -print)
+          if [[ -n "${bad}" ]]; then
+            echo "ERROR: batch files without CRLF line endings:" >&2
+            echo -n "${bad}" >&2
+            exit 1
+          fi
 
       - name: Buildifier
         run: |
