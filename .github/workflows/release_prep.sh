@@ -32,6 +32,23 @@ if [[ "${ON_DISK_VERSION}" != "${TAG}" ]]; then
     exit 1
 fi
 
+# cmd.exe fails to find labels in batch files with LF line endings, so the
+# archive must only ever contain CRLF batch files. `.gitattributes` makes the
+# checkout produce them; this guards against that regressing. A file whose
+# content is unchanged by deleting every CR has none.
+BAD_EOL=""
+while IFS= read -r f; do
+    if tr -d '\r' < "${f}" | cmp -s - "${f}"; then
+        BAD_EOL="${BAD_EOL}${f}"$'\n'
+    fi
+done < <(find "${WORKSPACE}" -name .git -prune -o -type f \( -name '*.bat' -o -name '*.cmd' \) -print)
+if [[ -n "${BAD_EOL}" ]]; then
+    echo "ERROR: batch files without CRLF line endings:" >&2
+    echo -n "${BAD_EOL}" >&2
+    exit 1
+fi
+
+
 # Build the source archive. Exclude .git (history isn't needed by
 # consumers) and .github (release infrastructure isn't part of the
 # ruleset). The on-disk filename matches the URL in

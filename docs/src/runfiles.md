@@ -108,4 +108,5 @@ The [`examples`](https://github.com/periareon/rules_batch/tree/main/examples) mo
 ## Limitations
 
 - Paths containing `!` cannot be resolved.
+- Batch files must use CRLF line endings; cmd fails to find labels in files with LF endings. Add `*.bat text eol=crlf` to your `.gitattributes`.
 - The repository used for name translation defaults to the main repository; pass `SOURCE_REPO` from scripts in external repositories.
