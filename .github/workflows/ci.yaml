@@ -13,10 +13,6 @@ on:
 env:
   BAZEL_STARTUP_FLAGS: --bazelrc=${{ github.workspace }}/.github/github.bazelrc
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   ci:
     name: ci (${{ matrix.os }}${{ matrix.runfiles && format(', {0} runfiles', matrix.runfiles) || '' }})
@@ -50,25 +46,28 @@ jobs:
       - name: Configure Bazel (Windows)
         if: runner.os == 'Windows'
         run: |
-          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
-          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
-          echo "startup --output_user_root=D:/bzl" >> user.bazelrc
+          echo "TEMP=$env:RUNNER_TEMP" >> "$env:GITHUB_ENV"
+          echo "TMP=$env:RUNNER_TEMP" >> "$env:GITHUB_ENV"
+          echo "startup --output_user_root=D:/bzl" >> ./user.bazelrc
 
       - name: Enable runfiles symlinks (Windows)
         if: matrix.runfiles == 'symlinks'
         run: |
-          echo "startup --windows_enable_symlinks" >> user.bazelrc
-          echo "build --enable_runfiles" >> user.bazelrc
+          echo "startup --windows_enable_symlinks" >> ./user.bazelrc
+          echo "build --enable_runfiles" >> ./user.bazelrc
 
-      - name: Test
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
         run: bazel $BAZEL_STARTUP_FLAGS test //...
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        run: bazel $env:BAZEL_STARTUP_FLAGS test //...
 
   ci-examples:
     name: ci-examples (${{ matrix.os }}${{ matrix.runfiles && format(', {0} runfiles', matrix.runfiles) || '' }})
     runs-on: ${{ matrix.os }}
     defaults:
       run:
-        shell: bash
         working-directory: examples
     strategy:
       fail-fast: false
@@ -95,27 +94,30 @@ jobs:
       - name: Configure Bazel (Windows)
         if: runner.os == 'Windows'
         run: |
-          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
-          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
-          echo "startup --output_user_root=D:/bzl" >> user.bazelrc
+          echo "TEMP=$env:RUNNER_TEMP" >> "$env:GITHUB_ENV"
+          echo "TMP=$env:RUNNER_TEMP" >> "$env:GITHUB_ENV"
+          echo "startup --output_user_root=D:/bzl" >> ./user.bazelrc
 
       - name: Enable runfiles symlinks (Windows)
         if: matrix.runfiles == 'symlinks'
         run: |
-          echo "startup --windows_enable_symlinks" >> user.bazelrc
-          echo "build --enable_runfiles" >> user.bazelrc
+          echo "startup --windows_enable_symlinks" >> ./user.bazelrc
+          echo "build --enable_runfiles" >> ./user.bazelrc
 
       - name: Configure Bazel
-        run: echo "common --keep_going" >> user.bazelrc
+        run: echo "common --keep_going" >> ./user.bazelrc
 
-      - name: Test
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
         run: bazel $BAZEL_STARTUP_FLAGS test //...
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        run: bazel $env:BAZEL_STARTUP_FLAGS test //...
 
       # Outside of `bazel test` and `bazel run` no RUNFILES_* variables are set,
       # so the preamble must discover the manifest next to the built script.
       - name: Run binaries directly (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
         run: |
           bazel $env:BAZEL_STARTUP_FLAGS build //:greet //:inline_greet //:parent
           foreach ($bin in "greet", "inline_greet", "parent") {
