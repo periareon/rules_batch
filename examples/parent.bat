@@ -1,6 +1,10 @@
 @echo off
 setlocal enableextensions enabledelayedexpansion
 
+@REM Parent script: resolves a child script from its own runfiles, makes sure
+@REM both RUNFILES_DIR and RUNFILES_MANIFEST_FILE are exported, and runs the
+@REM child. The child then locates the same runfiles through the environment.
+
 @REM --- begin runfiles.bat initialization v3 ---
 set "_rf=batch/runfiles/runfiles.bat"
 if not defined RUNFILES_DIR if exist "%~f0.runfiles\" set "RUNFILES_DIR=%~f0.runfiles"
@@ -28,13 +32,23 @@ set "RLOCATION=!RLOCATION:/=\!"
 set "_rf=" & set "_rf_mf=" & set "_rf_rm=" & set "_rf_c=" & set "_rf_l="
 @REM --- end runfiles.bat initialization v3 ---
 
-@REM The first path segment is the apparent name of this module as declared in
-@REM MODULE.bazel; runfiles.bat maps it to the canonical runfiles directory.
-call "%RLOCATION%" "rules_batch_examples/data/greeting.txt" GREETING_PATH
+call "%RLOCATION%" "rules_batch_examples/child.bat" CHILD
 if errorlevel 1 (
-    echo>&2 ERROR: could not resolve greeting.txt
+    echo>&2 ERROR: could not resolve child.bat
     exit /b 1
 )
 
-echo Reading greeting from: %GREETING_PATH%
-type "%GREETING_PATH%"
+call "%RLOCATION%" runfiles_export_envvars
+if errorlevel 1 (
+    echo>&2 ERROR: runfiles environment not available
+    exit /b 1
+)
+
+echo Parent starting: %CHILD%
+call "%CHILD%"
+if errorlevel 1 (
+    echo>&2 ERROR: child failed
+    exit /b 1
+)
+echo Parent done.
+exit /b 0

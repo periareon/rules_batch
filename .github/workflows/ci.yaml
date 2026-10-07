@@ -106,6 +106,18 @@ jobs:
         run: bazel $env:BAZEL_STARTUP_FLAGS test //...
         if: startswith(runner.os, 'Windows')
 
+      # Outside of `bazel test` and `bazel run` no RUNFILES_* variables are set,
+      # so the preamble must discover the manifest next to the built script.
+      - name: Run binaries directly (Windows)
+        working-directory: "${{ github.workspace }}/examples"
+        if: startswith(runner.os, 'Windows')
+        run: |
+          bazel $env:BAZEL_STARTUP_FLAGS build //:greet //:inline_greet //:parent
+          foreach ($bin in "greet", "inline_greet", "parent") {
+            & ".\bazel-bin\$bin.bat"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
       - name: Enable Runfiles (Windows)
         if: startswith(runner.os, 'Windows')
         run: |

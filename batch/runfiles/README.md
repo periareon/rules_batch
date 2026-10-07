@@ -2,7 +2,7 @@
 
 Utility for resolving [Bazel runfiles](https://bazel.build/extending/rules#runfiles) paths at runtime in batch scripts.
 
-For full documentation -- including the copy-paste preamble, repo mapping, inline mode, and manifest discovery -- see the [Runfiles](https://periareon.github.io/rules_batch/runfiles.html) page in the `rules_batch` docs.
+See the [Runfiles](https://periareon.github.io/rules_batch/runfiles.html) page for the copy-paste preamble and usage.
 
 ## Quick start
 

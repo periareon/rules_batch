@@ -7,3 +7,11 @@ bat_test(
     target_compatible_with = ["@platforms//os:windows"],
     deps = ["//batch/runfiles"],
 )
+
+bat_test(
+    name = "runfiles_unit_test",
+    srcs = ["runfiles_unit_test.bat"],
+    data = ["inline_test_body.bat"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = ["//batch/runfiles"],
+)

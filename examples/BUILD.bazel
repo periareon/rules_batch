@@ -1,6 +1,8 @@
 load("@rules_batch//batch:bat_binary.bzl", "bat_binary")
 load("@rules_batch//batch:bat_test.bzl", "bat_test")
 
+# Standalone mode: the script carries the documented preamble and calls
+# runfiles.bat through %RLOCATION%.
 bat_binary(
     name = "greet",
     srcs = ["greet.bat"],
@@ -12,6 +14,55 @@ bat_test(
     name = "greet_test",
     srcs = ["greet.bat"],
     data = ["data/greeting.txt"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = ["@rules_batch//batch/runfiles"],
+)
+
+# Inline mode: runfiles.bat is appended to the script at build time, so the
+# script calls :rlocation directly and needs neither the preamble nor the
+# runfiles dependency.
+genrule(
+    name = "inline_greet_src",
+    srcs = [
+        "inline_greet_body.bat",
+        "@rules_batch//batch/runfiles:runfiles.bat",
+    ],
+    outs = ["inline_greet_bundled.bat"],
+    cmd = "cat $(SRCS) > $@",
+)
+
+bat_binary(
+    name = "inline_greet",
+    srcs = ["inline_greet_bundled.bat"],
+    data = ["data/greeting.txt"],
+)
+
+bat_test(
+    name = "inline_greet_test",
+    srcs = ["inline_greet_bundled.bat"],
+    data = ["data/greeting.txt"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+# Child processes: the parent exports RUNFILES_DIR and RUNFILES_MANIFEST_FILE
+# and runs a script from its runfiles that uses the preamble itself.
+bat_binary(
+    name = "parent",
+    srcs = ["parent.bat"],
+    data = [
+        "child.bat",
+        "data/greeting.txt",
+    ],
+    deps = ["@rules_batch//batch/runfiles"],
+)
+
+bat_test(
+    name = "parent_test",
+    srcs = ["parent.bat"],
+    data = [
+        "child.bat",
+        "data/greeting.txt",
+    ],
     target_compatible_with = ["@platforms//os:windows"],
     deps = ["@rules_batch//batch/runfiles"],
 )
