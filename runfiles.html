@@ -237,6 +237,7 @@ call :runfiles_export_envvars
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <ul>
 <li>Paths containing <code>!</code> cannot be resolved.</li>
+<li>Batch files must use CRLF line endings; cmd fails to find labels in files with LF endings. Add <code>*.bat text eol=crlf</code> to your <code>.gitattributes</code>.</li>
 <li>The repository used for name translation defaults to the main repository; pass <code>SOURCE_REPO</code> from scripts in external repositories.</li>
 </ul>
 
