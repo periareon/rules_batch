@@ -1,3 +1,4 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//batch:bat_test.bzl", "bat_test")
 
 bat_test(
@@ -14,4 +15,16 @@ bat_test(
     data = ["inline_test_body.bat"],
     target_compatible_with = ["@platforms//os:windows"],
     deps = ["//batch/runfiles"],
+)
+
+sh_test(
+    name = "runfiles_from_sh_test",
+    srcs = ["runfiles_from_sh_test.sh"],
+    data = [
+        "data.txt",
+        "runfiles_test.bat",
+        "//batch/runfiles",
+    ],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = ["@rules_shell//shell/runfiles"],
 )
